@@ -1,0 +1,35 @@
+* Features:
+** Tags to implement: [0/2]
+  Default tags to implement. We will try to keep this to a minimum
+  and allow the user to expand this however he wants.
+*** TODO Required
+    A required tag that validates that the field exists
+*** TODO Required Without
+    A required tag that validates that the field exists if another field doesn't.
+    *If the other values exists and this value if not required, maybe dont validate it?*
+*** TODO Optional
+    Optional tag which means that we should not validate it if it's empty
+** Allow a user add his own tags
+** Dive
+   Allow for example to dive in to a slice to validate it's contents.
+   
+*** Min/Max
+* Known bugs:
+  Know bugs that should be addresed
+
+* Missing/postponed:
+  Missing or postponed features, something that should be implemented but is not atm.
+**  DONE Tag `-` means that the field is ignored. 
+** Add proper errors [0/3]
+   - [ ] A tag validation error
+   - [ ] A struct field validation error
+** If a struct has a struct, validate it also
+** Allow to define type validation
+** Add user defined validation
+   
+* Useful links:
+  Useful links that can help when developing
+** Reflect package example:
+   - https://gist.github.com/sosedoff/b373623a9572cf1a992486d2d87dcd85
+** Already existing validator:
+   - https://github.com/asaskevich/govalidator

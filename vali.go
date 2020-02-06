@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -30,18 +31,23 @@ const (
 )
 
 // tags if a type of map which holds all tag validation funcs
-type tags map[string]tagFunc
+type tags map[string]TagFunc
 
-// tagFunc is a func that is used to validate a field `s`
-// when a tag is found.
-type tagFunc func(s interface{}, o interface{}) error
+// TagFunc is a func that is used to validate a field `s`
+// using data providing in slice `o`.
+//
+// `s` can be nil if `Config.IgnoreNilPointer` is set to true
+// Slice `o` can be empty or nil and doesn't have to be used if not needed.
+type TagFunc func(s interface{}, o []interface{}) error
 
 // Vali is a struct that holds all the configuration
 // for the validation tool.
 //
 // It can be extended using its public methods by adding
 // additional tag validation funcs or type validation funcs.
-// Just make sure you add them before actually using the `Validate` method.
+// Just make sure you add them before actually using the `Validate` method
+// as no thread safety exists, so using and editting validation funcs
+// will result in a race condition.
 type Vali struct {
 	tags tags
 	cfg  *Config
@@ -94,64 +100,39 @@ func (v *Vali) Validate(s interface{}) error {
 			continue
 		}
 
-		valis, err := v.extract(tag)
+		valis, err := v.extractTags(tag)
 		if err != nil {
 			return newTagErr(tag, err)
 		}
 
 		for tag, vali := range valis {
-			var fields interface{}
-			if strings.Contains(tag, equalsSep) {
-				pastEqParts := strings.Split(tag, equalsSep)
-				if len(pastEqParts) != 2 {
-					return newTagErr(tag, fmt.Errorf("only 1 equalSep `%s` sign is allowed", equalsSep))
-				}
-
-				pasteq := pastEqParts[1]
-				parts := strings.Split(pasteq, valueSep)
-				if strings.Contains(tag, pointerToField) {
-					allPointers := true
-					for _, f := range parts {
-						if !strings.Contains(f, pointerToField) {
-							allPointers = false
-						}
-					}
-					if !allPointers {
-						return newTagErr(tag, errors.New("all values must be pointers if one is a pointer"))
-
-					}
-
-					var structFields []reflect.Value
-					for _, f := range parts {
-						f = strings.TrimPrefix(f, pointerToField)
-						for j := 0; j < val.NumField(); j++ {
-							if val.Type().Field(i).Name == f {
-								return newTagErr(tag, errors.New("cant point to yourself"))
-							}
-
-							if val.Type().Field(j).Name == f {
-								structFields = append(structFields, val.Field(i))
-							}
-						}
-					}
-					fields = structFields
-				} else {
-					fields = parts
-				}
+			with, err := v.extractValues(val, i, tag)
+			if err != nil {
+				return newTagErr(tag, err)
 			}
 
-			if err := vali(val.Field(i), fields); err != nil {
+			cmp := derefInterface(val.Field(i).Interface())
+			if cmp == nil && !v.cfg.IgnoreNilPointer {
+				return newStErr(val.Field(i).String(), tag, errors.New("value is nil"))
+			}
+
+			if err := vali(cmp, with); err != nil {
 				return newStErr(val.Field(i).String(), tag, err)
 			}
 		}
-
 	}
 
 	return nil
 }
 
-func (v *Vali) extract(tags string) (tags, error) {
-	fns := make(map[string]tagFunc, 0)
+// SetTag allows to to create a new tag and use it for validation.
+// Current tag that has the same name will get over written.
+func (v *Vali) SetTag(tag string, TagFunc TagFunc) {
+	v.tags[tag] = TagFunc
+}
+
+func (v *Vali) extractTags(tags string) (tags, error) {
+	fns := make(map[string]TagFunc, 0)
 	for _, tag := range strings.Split(tags, tagSep) {
 
 		parts := strings.Split(tag, equalsSep)
@@ -164,4 +145,48 @@ func (v *Vali) extract(tags string) (tags, error) {
 	}
 
 	return fns, nil
+}
+
+func (v *Vali) extractValues(val reflect.Value, currentField int, tag string) ([]interface{}, error) {
+	var fields []interface{}
+	if !strings.Contains(tag, equalsSep) {
+		return fields, nil
+	}
+	pastEqParts := strings.Split(tag, equalsSep)
+	if len(pastEqParts) != 2 {
+		return nil, fmt.Errorf("only 1 equalSep `%s` sign is allowed", equalsSep)
+	}
+
+	pasteq := pastEqParts[1]
+	for _, f := range strings.Split(pasteq, valueSep) {
+		if !strings.HasPrefix(f, pointerToField) {
+			in, err := strconv.ParseInt(f, 10, 64)
+			if err == nil {
+				fields = append(fields, in)
+				continue
+			}
+			fl, err := strconv.ParseFloat(f, 64)
+			if err == nil {
+				fields = append(fields, fl)
+				continue
+			}
+
+			fields = append(fields, derefInterface(f))
+			continue
+		}
+
+		f = strings.TrimPrefix(f, pointerToField)
+		for j := 0; j < val.NumField(); j++ {
+			if val.Type().Field(currentField).Name == f {
+				return nil, errors.New("cant point to yourself")
+			}
+
+			if val.Type().Field(j).Name == f {
+				in, _ := getInterface(val.Field(j))
+				fields = append(fields, in)
+			}
+		}
+	}
+
+	return fields, nil
 }

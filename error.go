@@ -1,6 +1,9 @@
 package vali
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 type TagErr struct {
 	Tag string
@@ -34,4 +37,8 @@ func (e *StErr) Error() string {
 
 func (e *TagErr) Error() string {
 	return fmt.Sprintf("tag '%s' failed with error: '%v'", e.Tag, e.Err)
+}
+
+func typeMismatch(i, o interface{}) error {
+	return fmt.Errorf("argument with type %v cant be compared to value of type %v", reflect.TypeOf(o), reflect.TypeOf(i))
 }

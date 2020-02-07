@@ -7,27 +7,35 @@ import (
 	"time"
 )
 
-// defaultTags returns the list of all default tags
-func defaultTags() tags {
-	return map[string]TagFunc{
-		"required":         required,
-		"required_without": required_without,
-		"max":              max,
-		"min":              min,
-		"one_of":           oneof,
-		"eq":               eq,
-		"neq":              neq,
-		"optional":         optional,
-	}
-}
+const (
+	// requiredTag can be used to tag a struct field making
+	// it fail the validation if the value is nil or default value.
+	requiredTag = "required"
+	// requiredWihtouTag can be used to tag a struct field making
+	// it fail the validation if the value nil or default value and the field pointer is nil.
+	requiredWithoutTag = "required_without"
+	// optionalTag can be used to tag a struct field making
+	// it not fail validation if it's empty or nil.
+	optionalTag = "optional"
+	// maxTag can be used to tag a struct field making
+	// it fail validation if the field is more than max.
+	maxTag = "max"
+	// maxTag can be used to tag a struct field making
+	// it fail validation if the field is less than min.
+	minTag = "min"
+	// oneofTag can be used to tag a struct field making
+	// it fail validation if the field does not have one of the
+	// given values.
+	oneofTag = "one_of"
+	// eqTag can be used to tag a struct field making
+	// it fail validation if the field is not equal to a given value or field.
+	eqTag = "eq"
+	// neqTag can be used to tag a struct field making
+	// it fail validation if the field is equal to a given value or field.
+	neqTag = "neq"
+)
 
-// required tag is used when default values can't be used
-// in struct field values.
 func required(s interface{}, o []interface{}) error {
-	if s == nil {
-		return errors.New("value is nil")
-	}
-
 	v := interfaceToReflectVal(s)
 	switch v.Kind() {
 	case reflect.Ptr:
@@ -56,6 +64,10 @@ func required(s interface{}, o []interface{}) error {
 			}
 		}
 	default:
+		if s == nil {
+			return errors.New("value is nil")
+		}
+
 		z := reflect.Zero(v.Type())
 		if v.Interface() == z.Interface() {
 			return fmt.Errorf("empty %s", v.Type().String())
@@ -197,7 +209,7 @@ func max(s interface{}, o []interface{}) error {
 			return typeMismatch(s, ov)
 		}
 
-		if int64(len(val)) < less {
+		if int64(len(val)) > less {
 			return fmt.Errorf("%s length is more than %d", val, less)
 		}
 	default:

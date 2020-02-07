@@ -5,6 +5,93 @@ import (
 	"time"
 )
 
+func TestOptional(t *testing.T) {
+	type mock struct {
+		First int `vali:"optional"`
+	}
+	type mock2 struct {
+		First *int `vali:"optional|max=2"`
+	}
+	type mock3 struct {
+		First int `vali:"required|optional"`
+	}
+	type mock4 struct {
+		First int `vali:"optional|min=2"`
+	}
+	type args struct {
+		s interface{}
+	}
+	one := 1
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test 'optional' using mock, value is empty and optional, should not error",
+			args: args{
+				s: &mock{
+					First: 1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'optional' using mock2, value is nil and optional, should not error",
+			args: args{
+				s: &mock2{
+					First: nil,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'optional' using mock2, value not nil and optional, should not error",
+			args: args{
+				s: &mock2{
+					First: &one,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'optional' using mock3, value is required and optional, should error",
+			args: args{
+				s: &mock3{
+					First: 1,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'optional' using mock4, value is optional, but is not empty and is more than min, should not error",
+			args: args{
+				s: &mock4{
+					First: 3,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'optional' using mock4, value is optional, but is not empty and below min, should error",
+			args: args{
+				s: &mock4{
+					First: 1,
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestNeq(t *testing.T) {
 	type mock struct {
 		First int `vali:"neq=1"`
@@ -93,7 +180,7 @@ func TestNeq(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -188,7 +275,7 @@ func TestEq(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -283,7 +370,7 @@ func TestOneOf(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -307,7 +394,7 @@ func TestMax(t *testing.T) {
 		Second time.Time `vali:"max=*First"`
 	}
 	type mock4 struct {
-		First string ` vali:"minx=5"`
+		First string ` vali:"max=5"`
 	}
 	type args struct {
 		s interface{}
@@ -417,13 +504,13 @@ func TestMax(t *testing.T) {
 					First: "a",
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -447,7 +534,7 @@ func TestMin(t *testing.T) {
 		Second time.Time `vali:"min=*First"`
 	}
 	type mock4 struct {
-		First string ` vali:"minx=5"`
+		First string ` vali:"min=5"`
 	}
 	type args struct {
 		s interface{}
@@ -548,7 +635,7 @@ func TestMin(t *testing.T) {
 					First: "aaaaaaa",
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "test 'min' using mock4, string is below min",
@@ -563,7 +650,7 @@ func TestMin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -619,7 +706,7 @@ func TestRequiredWithout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -685,7 +772,7 @@ func TestRequired(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New(nil).Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

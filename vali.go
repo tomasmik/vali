@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -50,33 +48,30 @@ type TagFunc func(s interface{}, o []interface{}) error
 // will result in a race condition.
 type Vali struct {
 	tags tags
-	cfg  *Config
-}
-
-// Config is a config struct that can be given to the
-// `New()` func when creating the validator.
-type Config struct {
-	IgnoreNilPointer bool
 }
 
 // New returns a new validator instance.
-func New(cfg *Config) *Vali {
-	if cfg == nil {
-		cfg = &Config{
-			IgnoreNilPointer: false,
-		}
-	}
-
+func New() *Vali {
 	return &Vali{
-		tags: defaultTags(),
-		cfg:  cfg,
+		tags: map[string]TagFunc{
+			requiredTag:        required,
+			requiredWithoutTag: required_without,
+			maxTag:             max,
+			minTag:             min,
+			oneofTag:           oneof,
+			eqTag:              eq,
+			neqTag:             neq,
+			optionalTag:        optional,
+		},
 	}
 }
 
 // Validate accepts a struct and validates its according to the given tags.
-func (v *Vali) Validate(s interface{}) error {
+func (v *Vali) Validate(s interface{}) []error {
+	var errs []error
+
 	if s == nil {
-		return errors.New("struct is nil")
+		return append(errs, errors.New("struct is nil"))
 	}
 
 	val := reflect.ValueOf(s)
@@ -86,107 +81,63 @@ func (v *Vali) Validate(s interface{}) error {
 
 	// we only accept structs
 	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("function only accepts structs; got %s", val.Kind())
+		return append(errs, fmt.Errorf("function only accepts structs; got %s", val.Kind()))
 	}
+
 	for i := 0; i < val.NumField(); i++ {
 		// Ignore fields that are private
 		if !val.Field(i).CanSet() {
 			continue
 		}
 
-		tag := val.Type().Field(i).Tag.Get(valiTag)
-		// Dont validate fields which have no tags
-		if tag == "" || tag == "-" {
+		tags := extractTags(val, i)
+		if len(tags) == 0 {
 			continue
 		}
 
-		valis, err := v.extractTags(tag)
-		if err != nil {
-			return newTagErr(tag, err)
+		m := tagSliceToMap(tags)
+		if err := validateTags(m); err != nil {
+			errs = append(errs, err)
+			continue
 		}
 
-		for tag, vali := range valis {
-			with, err := v.extractValues(val, i, tag)
-			if err != nil {
-				return newTagErr(tag, err)
+		cmp := derefInterface(val.Field(i).Interface())
+		if _, ok := m[optionalTag]; ok {
+			// Nil is fine
+			if cmp == nil {
+				continue
 			}
 
-			cmp := derefInterface(val.Field(i).Interface())
-			if cmp == nil && !v.cfg.IgnoreNilPointer {
-				return newStErr(val.Field(i).String(), tag, errors.New("value is nil"))
+			if err := required(cmp, nil); err != nil {
+				// Empty is fine
+				continue
+			}
+		}
+
+		if _, ok := m[optionalTag]; !ok && cmp == nil {
+			errs = append(errs, newStErr(val.Field(i).String(), "", errors.New("value is nil")))
+			continue
+		}
+
+		for _, t := range tags {
+			fn, ok := v.tags[t.name]
+			if !ok {
+				// no such tag
+				// TODO consider throwing an error here
+				continue
 			}
 
-			if err := vali(cmp, with); err != nil {
-				return newStErr(val.Field(i).String(), tag, err)
+			if err := fn(cmp, t.args); err != nil {
+				errs = append(errs, newStErr(val.Field(i).String(), t.name, err))
 			}
 		}
 	}
 
-	return nil
+	return errs
 }
 
 // SetTag allows to to create a new tag and use it for validation.
 // Current tag that has the same name will get over written.
 func (v *Vali) SetTag(tag string, TagFunc TagFunc) {
 	v.tags[tag] = TagFunc
-}
-
-func (v *Vali) extractTags(tags string) (tags, error) {
-	fns := make(map[string]TagFunc, 0)
-	for _, tag := range strings.Split(tags, tagSep) {
-
-		parts := strings.Split(tag, equalsSep)
-		fn, ok := v.tags[parts[0]]
-		if !ok {
-			return nil, fmt.Errorf("%s tag does not exist", tag)
-		}
-
-		fns[tag] = fn
-	}
-
-	return fns, nil
-}
-
-func (v *Vali) extractValues(val reflect.Value, currentField int, tag string) ([]interface{}, error) {
-	var fields []interface{}
-	if !strings.Contains(tag, equalsSep) {
-		return fields, nil
-	}
-	pastEqParts := strings.Split(tag, equalsSep)
-	if len(pastEqParts) != 2 {
-		return nil, fmt.Errorf("only 1 equalSep `%s` sign is allowed", equalsSep)
-	}
-
-	pasteq := pastEqParts[1]
-	for _, f := range strings.Split(pasteq, valueSep) {
-		if !strings.HasPrefix(f, pointerToField) {
-			in, err := strconv.ParseInt(f, 10, 64)
-			if err == nil {
-				fields = append(fields, in)
-				continue
-			}
-			fl, err := strconv.ParseFloat(f, 64)
-			if err == nil {
-				fields = append(fields, fl)
-				continue
-			}
-
-			fields = append(fields, derefInterface(f))
-			continue
-		}
-
-		f = strings.TrimPrefix(f, pointerToField)
-		for j := 0; j < val.NumField(); j++ {
-			if val.Type().Field(currentField).Name == f {
-				return nil, errors.New("cant point to yourself")
-			}
-
-			if val.Type().Field(j).Name == f {
-				in, _ := getInterface(val.Field(j))
-				fields = append(fields, in)
-			}
-		}
-	}
-
-	return fields, nil
 }

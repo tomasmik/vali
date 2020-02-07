@@ -24,19 +24,8 @@ func newStErr(field, tag string, err error) *StErr {
 	}
 }
 
-func newTagErr(tag string, err error) *TagErr {
-	return &TagErr{
-		Tag: tag,
-		Err: err,
-	}
-}
-
 func (e *StErr) Error() string {
 	return fmt.Sprintf("field: '%s', failed '%s' tag with an error: '%v'", e.Field, e.Tag, e.Err)
-}
-
-func (e *TagErr) Error() string {
-	return fmt.Sprintf("tag '%s' failed with error: '%v'", e.Tag, e.Err)
 }
 
 func typeMismatch(i, o interface{}) error {

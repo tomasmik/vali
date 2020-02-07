@@ -28,12 +28,14 @@
 ** Dive
    Allow for example to dive in to a slice to validate it's contents.
    
-* Known bugs:
+* Known bugs: [1/1]
   Know bugs that should be addresed
-
+** DONE BUG: Tags retured by the extractTags are not actually in order.
+   CLOSED: [2020-02-07 Pn 19:22]
+   Not sure how much of a trouble that makes, but it be annoying when it comes to tags like required or optional.
 * Missing/postponed: [4/7]
   Missing or postponed features, something that should be implemented but is not atm.
-**  DONE Tag `-` means that the field is ignored. 
+** DONE Tag `-` means that the field is ignored. 
 ** DONE Add proper errors [2/2]
    CLOSED: [2020-02-06 Kt 13:59]
    - [X] A tag validation error

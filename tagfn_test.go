@@ -83,9 +83,10 @@ func TestOptional(t *testing.T) {
 		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -178,9 +179,10 @@ func TestNeq(t *testing.T) {
 		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -272,10 +274,10 @@ func TestEq(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -368,9 +370,10 @@ func TestOneOf(t *testing.T) {
 		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -380,10 +383,12 @@ func TestOneOf(t *testing.T) {
 func TestMax(t *testing.T) {
 	more := 10
 	less := 1
+	moreF := 10.0
+	lessF := 1.0
 	type mock struct {
-		First  int  `vali:"max=5"`
-		Second int  `vali:"max=2"`
-		Third  *int `vali:"max=5"`
+		First  int     `vali:"max=5"`
+		Second float64 `vali:"max=2.0"`
+		Third  *int    `vali:"max=5"`
 	}
 	type mock2 struct {
 		First  *int
@@ -394,7 +399,13 @@ func TestMax(t *testing.T) {
 		Second time.Time `vali:"max=*First"`
 	}
 	type mock4 struct {
-		First string ` vali:"max=5"`
+		First string `vali:"max=5"`
+	}
+	type mock5 struct {
+		Fn func() `vali:"max=5"`
+	}
+	type mock6 struct {
+		First *int `vali:"max=5"`
 	}
 	type args struct {
 		s interface{}
@@ -409,7 +420,7 @@ func TestMax(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  less,
-					Second: less,
+					Second: lessF,
 					Third:  &less,
 				},
 			},
@@ -420,7 +431,7 @@ func TestMax(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  more,
-					Second: less,
+					Second: lessF,
 					Third:  &less,
 				},
 			},
@@ -431,7 +442,7 @@ func TestMax(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  more,
-					Second: more,
+					Second: moreF,
 					Third:  &less,
 				},
 			},
@@ -442,7 +453,7 @@ func TestMax(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  less,
-					Second: less,
+					Second: lessF,
 					Third:  &more,
 				},
 			},
@@ -506,11 +517,40 @@ func TestMax(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test 'max' using mock6,field values are nil, should error",
+			args: args{
+				s: &mock6{
+					First: nil,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'max' using mock2,pointing to a nil struct value, should error",
+			args: args{
+				s: &mock2{
+					First:  nil,
+					Second: more,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'max' using mock5, can't test func should error",
+			args: args{
+				s: &mock5{
+					Fn: func() {},
+				},
+			},
+			wantErr: true,
+		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -519,11 +559,13 @@ func TestMax(t *testing.T) {
 
 func TestMin(t *testing.T) {
 	more := 10
+	moreF := 10.0
 	less := 1
+	lessF := 1.0
 	type mock struct {
-		First  int  `vali:"min=5"`
-		Second int  `vali:"min=2"`
-		Third  *int `vali:"min=5"`
+		First  int     `vali:"min=5"`
+		Second float64 `vali:"min=2.0"`
+		Third  *int    `vali:"min=5"`
 	}
 	type mock2 struct {
 		First  *int
@@ -534,7 +576,13 @@ func TestMin(t *testing.T) {
 		Second time.Time `vali:"min=*First"`
 	}
 	type mock4 struct {
-		First string ` vali:"min=5"`
+		First string `vali:"min=5"`
+	}
+	type mock5 struct {
+		Fn func() `vali:"min=5"`
+	}
+	type mock6 struct {
+		First *int `vali:"min=5"`
 	}
 	type args struct {
 		s interface{}
@@ -549,7 +597,7 @@ func TestMin(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  more,
-					Second: more,
+					Second: moreF,
 					Third:  &more,
 				},
 			},
@@ -560,7 +608,7 @@ func TestMin(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  less,
-					Second: more,
+					Second: moreF,
 					Third:  &more,
 				},
 			},
@@ -571,7 +619,7 @@ func TestMin(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  less,
-					Second: less,
+					Second: lessF,
 					Third:  &more,
 				},
 			},
@@ -582,7 +630,7 @@ func TestMin(t *testing.T) {
 			args: args{
 				s: &mock{
 					First:  more,
-					Second: more,
+					Second: moreF,
 					Third:  &less,
 				},
 			},
@@ -646,11 +694,40 @@ func TestMin(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "test 'min' using mock6,field values are nil, should error",
+			args: args{
+				s: &mock6{
+					First: nil,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'min' using mock2,pointing to a nil struct value, should error",
+			args: args{
+				s: &mock2{
+					First:  nil,
+					Second: more,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'min' using mock5, can't test func should error",
+			args: args{
+				s: &mock5{
+					Fn: func() {},
+				},
+			},
+			wantErr: true,
+		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -704,9 +781,10 @@ func TestRequiredWithout(t *testing.T) {
 		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -719,6 +797,9 @@ func TestRequired(t *testing.T) {
 	type mock struct {
 		Str    string  `vali:"required"`
 		PtrStr *string `vali:"required"`
+	}
+	type mockfn struct {
+		Fn func() `vali:"required"`
 	}
 	type args struct {
 		s interface{}
@@ -768,11 +849,30 @@ func TestRequired(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test required, function not empty, should not error",
+			args: args{
+				s: &mockfn{
+					Fn: func() {},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test required, function nil, should error",
+			args: args{
+				s: &mockfn{
+					Fn: nil,
+				},
+			},
+			wantErr: true,
+		},
 	}
 
+	v := New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := New().Validate(tt.args.s); (err != nil) != tt.wantErr {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
 				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

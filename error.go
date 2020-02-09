@@ -5,11 +5,7 @@ import (
 	"reflect"
 )
 
-type TagErr struct {
-	Tag string
-	Err error
-}
-
+// StErr is returned by the validation func `Validate()`
 type StErr struct {
 	Field string
 	Tag   string
@@ -24,6 +20,7 @@ func newStErr(field, tag string, err error) *StErr {
 	}
 }
 
+// Error prints the error as a string
 func (e *StErr) Error() string {
 	return fmt.Sprintf("field: '%s', failed '%s' tag with an error: '%v'", e.Field, e.Tag, e.Err)
 }

@@ -10,12 +10,18 @@ import (
 const (
 	// requiredTag can be used to tag a struct field making
 	// it fail the validation if the value is nil or default value.
+	// Only 1 required tag is allowed and a field cannot have
+	// a mix of required, required_without, optional.
 	requiredTag = "required"
 	// requiredWihtouTag can be used to tag a struct field making
 	// it fail the validation if the value nil or default value and the field pointer is nil.
+	// Only 1 required_without tag is allowed and a field cannot have
+	// a mix of required, required_without, optional.
 	requiredWithoutTag = "required_without"
 	// optionalTag can be used to tag a struct field making
 	// it not fail validation if it's empty or nil.
+	// Only 1 optional tag is allowed and a field cannot have
+	// a mix of required, required_without, optional.
 	optionalTag = "optional"
 	// maxTag can be used to tag a struct field making
 	// it fail validation if the field is more than max.

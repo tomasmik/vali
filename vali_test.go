@@ -19,6 +19,8 @@ func TestValidate(t *testing.T) {
 		M *Mock `vali:"required"`
 	}
 	var mockFn func()
+	var mockin interface{}
+	ptToPt := &mockin
 	type args struct {
 		s interface{}
 	}
@@ -41,13 +43,16 @@ func TestValidate(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "struct inside of a struct is nil, should error",
+			name: "struct inside of a struct is not valid, should error",
 			args: args{
 				s: &mock2{
-					M: nil,
+					M: &Mock{
+						First:  "b",
+						Second: 5,
+					},
 				},
 			},
-			want: []error{newStErr("M", requiredTag, errors.New("value is nil"))},
+			want: []error{newStErr("First", eqTag, errors.New("b is not equal to a"))},
 		},
 		{
 			name: "struct is nil, should error",
@@ -62,6 +67,13 @@ func TestValidate(t *testing.T) {
 				s: &mockFn,
 			},
 			want: []error{fmt.Errorf("function only accepts structs; got %s", reflect.ValueOf(mockFn).Kind())},
+		},
+		{
+			name: "argument is a func not a struct, should error",
+			args: args{
+				s: &ptToPt,
+			},
+			want: []error{fmt.Errorf("function only accepts structs; got %s", reflect.Interface)},
 		},
 		{
 			name: "only pointers to a struct are accepted, should error",

@@ -126,6 +126,14 @@ func (v *Vali) Validate(s interface{}) []error {
 			continue
 		}
 
+		cmp := derefInterface(val.Field(i).Interface())
+		if reflect.ValueOf(cmp).Kind() == reflect.Struct {
+			ss := val.Field(i).Interface()
+			if ers := v.Validate(&ss); ers != nil {
+				errs = append(errs, ers...)
+			}
+		}
+
 		tags := extractTags(val, i)
 		if len(tags) == 0 {
 			continue
@@ -137,7 +145,6 @@ func (v *Vali) Validate(s interface{}) []error {
 			continue
 		}
 
-		cmp := derefInterface(val.Field(i).Interface())
 		if _, ok := m[optionalTag]; ok {
 			// Nil is fine
 			if cmp == nil {

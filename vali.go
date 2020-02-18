@@ -80,9 +80,9 @@ func New() *Vali {
 // Validations are applied in this order:
 // 1. Type validation if one is set.
 // 2. Tag validation in order the tags were set.
-// It returns a slice of errors, if the errors consists of any errors
-// that are not of type *StErr consider the validation a failure
-// and fix the errors before validating a struct again.
+//
+// The return value `error` can be type asserted in to `*vali.AggErr`
+// which allows to explore each error seprately.
 // Example:
 /*
 `
@@ -91,15 +91,16 @@ func New() *Vali {
 	err := vali.New().Validate(str)
 `
 */
-func (v *Vali) Validate(s interface{}) []error {
-	var errs []error
+func (v *Vali) Validate(s interface{}) error {
+	errs := newAggErr()
+
 	if s == nil {
-		return append(errs, errors.New("struct is nil"))
+		return errs.addErr(errors.New("struct is nil"))
 	}
 
 	val := reflect.ValueOf(s)
 	if val.Kind() != reflect.Ptr {
-		return append(errs, fmt.Errorf("function only accepts pointer to structs; got %s", val.Kind()))
+		return errs.addErr(fmt.Errorf("function only accepts pointer to structs; got %s", val.Kind()))
 	}
 
 	orgVal := val
@@ -112,12 +113,12 @@ func (v *Vali) Validate(s interface{}) []error {
 
 	// we only accept structs
 	if val.Kind() != reflect.Struct {
-		return append(errs, fmt.Errorf("function only accepts structs; got %s", val.Kind()))
+		return errs.addErr(fmt.Errorf("function only accepts structs; got %s", val.Kind()))
 	}
 
 	if fn, ok := v.types[val.Type()]; ok {
 		if err := fn(orgVal.Interface()); err != nil {
-			errs = append(errs, err)
+			errs.addErr(err)
 		}
 	}
 
@@ -130,7 +131,7 @@ func (v *Vali) Validate(s interface{}) []error {
 		if reflect.ValueOf(cmp).Kind() == reflect.Struct {
 			ss := val.Field(i).Interface()
 			if ers := v.Validate(&ss); ers != nil {
-				errs = append(errs, ers...)
+				errs.addErr(ers)
 			}
 		}
 
@@ -141,7 +142,7 @@ func (v *Vali) Validate(s interface{}) []error {
 
 		m := tagSliceToMap(tags)
 		if err := validateTags(m); err != nil {
-			errs = append(errs, err)
+			errs.addErr(err)
 			continue
 		}
 
@@ -166,12 +167,12 @@ func (v *Vali) Validate(s interface{}) []error {
 			}
 
 			if err := fn(cmp, t.args); err != nil {
-				errs = append(errs, newStErr(val.Type().Field(i).Name, t.name, err))
+				errs.addErr(tagError(val.Type().Field(i).Name, t.name, err))
 			}
 		}
 	}
 
-	return errs
+	return errs.toError()
 }
 
 // SetTagValidation allows to create a new tag and use it for validation.

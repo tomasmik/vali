@@ -28,7 +28,7 @@ func TestValidate(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []error
+		want error
 	}{
 		{
 			name: "struct inside of a struct is valid, should not error",
@@ -52,28 +52,28 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			want: []error{newStErr("First", eqTag, errors.New("b is not equal to a"))},
+			want: newAggErr().addErr(newAggErr().addErr(tagError("First", eqTag, errors.New("b is not equal to a")))),
 		},
 		{
 			name: "struct is nil, should error",
 			args: args{
 				s: nil,
 			},
-			want: []error{errors.New("struct is nil")},
+			want: newAggErr().addErr(errors.New("struct is nil")),
 		},
 		{
 			name: "argument is a func not a struct, should error",
 			args: args{
 				s: &mockFn,
 			},
-			want: []error{fmt.Errorf("function only accepts structs; got %s", reflect.ValueOf(mockFn).Kind())},
+			want: newAggErr().addErr(fmt.Errorf("function only accepts structs; got %s", reflect.ValueOf(mockFn).Kind())),
 		},
 		{
 			name: "argument is a func not a struct, should error",
 			args: args{
 				s: &ptToPt,
 			},
-			want: []error{fmt.Errorf("function only accepts structs; got %s", reflect.Interface)},
+			want: newAggErr().addErr(fmt.Errorf("function only accepts structs; got %s", reflect.Interface)),
 		},
 		{
 			name: "only pointers to a struct are accepted, should error",
@@ -85,7 +85,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			want: []error{fmt.Errorf("function only accepts pointer to structs; got %s", reflect.ValueOf(mock2{}).Kind())},
+			want: newAggErr().addErr(fmt.Errorf("function only accepts pointer to structs; got %s", reflect.ValueOf(mock2{}).Kind())),
 		},
 	}
 
@@ -93,6 +93,8 @@ func TestValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := v.Validate(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+				fmt.Println(reflect.ValueOf(got).Elem())
+				fmt.Println(reflect.ValueOf(tt.want).Elem())
 				t.Errorf("Vali.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -187,7 +189,7 @@ func TestValiSetTypeValidation(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []error
+		want error
 	}{
 		{
 			name: "struct is valid, should not error",
@@ -205,7 +207,7 @@ func TestValiSetTypeValidation(t *testing.T) {
 					First: 2,
 				},
 			},
-			want: []error{newStErr("First", minTag, fmt.Errorf("%d is less than %d", 2, 4))},
+			want: newAggErr().addErr(tagError("First", minTag, fmt.Errorf("%d is less than %d", 2, 4))),
 		},
 		{
 			name: "struct is valid, should not error",
@@ -214,10 +216,9 @@ func TestValiSetTypeValidation(t *testing.T) {
 					First: 3,
 				},
 			},
-			want: []error{
+			want: newAggErr().addErr(
 				errors.New("m.First can't be 3"),
-				newStErr("First", minTag, fmt.Errorf("%d is less than %d", 3, 4)),
-			},
+				tagError("First", minTag, fmt.Errorf("%d is less than %d", 3, 4))),
 		},
 	}
 

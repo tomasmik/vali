@@ -5,24 +5,44 @@ import (
 	"reflect"
 )
 
-// StErr is returned by the validation func `Validate()`
-type StErr struct {
-	Field string
-	Tag   string
-	Err   error
+// AggErr is a struct which allows the
+// Validate func to stack errors in to a slice
+// but return a single error.
+type AggErr struct {
+	Sl []error
 }
 
-func newStErr(field, tag string, err error) *StErr {
-	return &StErr{
-		Field: field,
-		Tag:   tag,
-		Err:   err,
+func newAggErr() *AggErr {
+	return &AggErr{
+		Sl: make([]error, 0),
 	}
 }
 
-// Error prints the error as a string
-func (e *StErr) Error() string {
-	return fmt.Sprintf("field: '%s', failed '%s' tag with an error: '%v'", e.Field, e.Tag, e.Err)
+func (e *AggErr) addErr(err ...error) *AggErr {
+	e.Sl = append(e.Sl, err...)
+	return e
+}
+
+func (e *AggErr) Error() string {
+	var s string
+	for i, err := range e.Sl {
+		s = err.Error()
+		if len(e.Sl)-1 != i {
+			s += "\n"
+		}
+	}
+	return s
+}
+
+func (e *AggErr) toError() error {
+	if len(e.Sl) == 0 {
+		return nil
+	}
+	return e
+}
+
+func tagError(field, tag string, err error) error {
+	return fmt.Errorf("field: '%s', failed '%s' tag with an error: '%v'", field, tag, err)
 }
 
 func typeMismatch(i, o interface{}) error {

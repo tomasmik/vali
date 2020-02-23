@@ -22,6 +22,8 @@ const (
 	// it not fail validation if it's empty or nil.
 	// Only 1 optional tag is allowed and a field cannot have
 	// a mix of required, required_without, optional.
+	//
+	// This is a special tag as it's not a part of the tags map
 	optionalTag = "optional"
 	// maxTag can be used to tag a struct field making
 	// it fail validation if the field is more than max.
@@ -96,310 +98,251 @@ func required_without(s interface{}, o []interface{}) error {
 	return nil
 }
 
-func optional(s interface{}, o []interface{}) error {
-	return nil
-}
-
 func min(s interface{}, o []interface{}) error {
-	ov := o[0]
-	if ov == nil {
-		return errors.New("can't compare if arg is nil")
-	}
-	if s == nil {
-		return errors.New("can't compare if base value nil")
-	}
-
-	switch s.(type) {
-	case float32, float64:
-		val, _ := getFloat(s)
-		more, ok := getFloat(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val < more {
-			return fmt.Errorf("%f is less than %f", val, more)
-		}
-	case int, int8, int16, int32, int64:
-		val, _ := getInt(s)
-		more, ok := getInt(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val < more {
-			return fmt.Errorf("%d is less than %d", val, more)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		val, _ := getUInt(s)
-		more, ok := getUInt(ov)
-		if !ok {
-			of, ok := getInt(ov)
+	comparison := newComparison(&cmp{
+		float: func(have float64, exp []interface{}) (bool, error) {
+			val, _ := getFloat(s)
+			more, ok := getFloat(exp[0])
 			if !ok {
-				return typeMismatch(s, ov)
+				return false, typeMismatch(s, exp[0])
+			}
+			return val > more, nil
+		},
+		int: func(have int64, exp []interface{}) (bool, error) {
+			val, _ := getInt(s)
+			more, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return val > more, nil
+		},
+		uint: func(have uint64, exp []interface{}) (bool, error) {
+			val, _ := getUInt(s)
+			more, ok := getUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return val > more, nil
+		},
+		time: func(have time.Time, exp []interface{}) (bool, error) {
+			more, ok := exp[0].(time.Time)
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return !have.Before(more), nil
+		},
+		string: func(have string, exp []interface{}) (bool, error) {
+			more, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
 			}
 
-			more = uint64(of)
-		}
-		if val < more {
-			return fmt.Errorf("%d is less than %d", val, more)
-		}
-	case time.Time:
-		val, _ := s.(time.Time)
-		more, ok := ov.(time.Time)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val.Before(more) {
-			return fmt.Errorf("%s is less than %s", val.String(), more.String())
-		}
-	case string:
-		val, _ := s.(string)
-		more, ok := getInt(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
+			return !(int64(len(have)) < more), nil
+		},
+	})
 
-		if int64(len(val)) < more {
-			return fmt.Errorf("%s length is less than %d", val, more)
-		}
-	default:
-		return fmt.Errorf("can't check min of type %v", reflect.TypeOf(s).String())
+	ok, err := comparison.do(s, o)
+	if err != nil {
+		return err
 	}
+	if !ok {
+		return fmt.Errorf("%v is less than %v", s, o[0])
+	}
+
 	return nil
 }
 
 func max(s interface{}, o []interface{}) error {
-	ov := o[0]
-	if ov == nil {
-		return errors.New("can't compare if arg is nil")
-	}
-	if s == nil {
-		return errors.New("can't compare if base value nil")
-	}
-
-	switch s.(type) {
-	case float32, float64:
-		val, _ := getFloat(s)
-		less, ok := getFloat(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val > less {
-			return fmt.Errorf("%f is more than %f", val, less)
-		}
-	case int, int8, int16, int32, int64:
-		val, _ := getInt(s)
-		less, ok := getInt(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val > less {
-			return fmt.Errorf("%d is more than %d", val, less)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		val, _ := getUInt(s)
-		less, ok := getUInt(ov)
-		if !ok {
-			of, ok := getInt(ov)
+	comparison := newComparison(&cmp{
+		float: func(have float64, exp []interface{}) (bool, error) {
+			val, _ := getFloat(s)
+			more, ok := getFloat(exp[0])
 			if !ok {
-				return typeMismatch(s, less)
+				return false, typeMismatch(s, exp[0])
+			}
+			return val <= more, nil
+		},
+		int: func(have int64, exp []interface{}) (bool, error) {
+			val, _ := getInt(s)
+			more, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return val <= more, nil
+		},
+		uint: func(have uint64, exp []interface{}) (bool, error) {
+			val, _ := getUInt(s)
+			more, ok := getUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return val <= more, nil
+		},
+		time: func(have time.Time, exp []interface{}) (bool, error) {
+			more, ok := exp[0].(time.Time)
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return have.Before(more), nil
+		},
+		string: func(have string, exp []interface{}) (bool, error) {
+			more, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
 			}
 
-			less = uint64(of)
-		}
+			return (int64(len(have)) < more), nil
+		},
+	})
 
-		if val > less {
-			return fmt.Errorf("%d is more than %d", val, less)
-		}
-	case time.Time:
-		val, _ := s.(time.Time)
-		less, ok := ov.(time.Time)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-		if val.After(less) {
-			return fmt.Errorf("%s is more than %s", val.String(), less.String())
-		}
-	case string:
-		val, _ := s.(string)
-		less, ok := getInt(ov)
-		if !ok {
-			return typeMismatch(s, ov)
-		}
-
-		if int64(len(val)) > less {
-			return fmt.Errorf("%s length is more than %d", val, less)
-		}
-	default:
-		return fmt.Errorf("can't check max of type %v", reflect.TypeOf(s).String())
+	ok, err := comparison.do(s, o)
+	if err != nil {
+		return err
 	}
+	if !ok {
+		return fmt.Errorf("%v is more than %v", s, o[0])
+	}
+
 	return nil
 }
 
 func oneof(s interface{}, o []interface{}) error {
-	if len(o) == 0 {
-		return errors.New("no arguments passed")
-	}
-
-	switch s.(type) {
-	case float32, float64:
-		val, _ := getFloat(s)
-		for _, arg := range o {
-			f, ok := getFloat(arg)
-			if !ok {
-				return typeMismatch(s, arg)
-			}
-			if val == f {
-				return nil
-			}
-		}
-	case int, int8, int16, int32, int64:
-		val, _ := getInt(s)
-		for _, arg := range o {
-			f, ok := getInt(arg)
-			if !ok {
-				return typeMismatch(s, arg)
-			}
-			if val == f {
-				return nil
-			}
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		val, _ := getUInt(s)
-		for _, arg := range o {
-			f, ok := getUInt(arg)
-			if !ok {
-				of, ok := getInt(arg)
+	comparison := newComparison(&cmp{
+		float: func(have float64, exp []interface{}) (bool, error) {
+			for _, arg := range exp {
+				f, ok := getFloat(arg)
 				if !ok {
-					of, ok := getInt(arg)
-					if !ok {
-						return typeMismatch(s, arg)
-					}
-
-					f = uint64(of)
+					return false, typeMismatch(s, arg)
 				}
+				if have == f {
+					return true, nil
+				}
+			}
+			return false, nil
+		},
+		int: func(have int64, exp []interface{}) (bool, error) {
+			for _, arg := range exp {
+				f, ok := getInt(arg)
+				if !ok {
+					return false, typeMismatch(s, arg)
+				}
+				if have == f {
+					return true, nil
+				}
+			}
+			return false, nil
+		},
+		uint: func(have uint64, exp []interface{}) (bool, error) {
+			for _, arg := range exp {
+				f, ok := getUIntFallback(arg)
+				if !ok {
+					return false, typeMismatch(s, arg)
 
-				f = uint64(of)
+				}
+				if have == f {
+					return true, nil
+				}
 			}
-			if val == f {
-				return nil
+			return false, nil
+		},
+		string: func(have string, exp []interface{}) (bool, error) {
+			for _, arg := range o {
+				f := getString(arg)
+				if have == f {
+					return true, nil
+				}
 			}
-		}
-	case string:
-		val, _ := s.(string)
-		for _, arg := range o {
-			f := getString(arg)
-			if val == f {
-				return nil
-			}
-		}
-	default:
-		return fmt.Errorf("can't check oneof of type %v", reflect.TypeOf(s).String())
+			return false, nil
+		},
+	})
+
+	ok, err := comparison.do(s, o)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("must have at least one of oneof %v", o)
+	if !ok {
+		return fmt.Errorf("must have at least one of oneof %v", o)
+	}
+
+	return nil
 }
 
-// maybe it's worth to change this to something more simple in the future.
-// `deepEqual` would probably work too, but then we would make it harder to parse
-// slices and maps in the future.
 func eq(s interface{}, o []interface{}) error {
-	if len(o) == 0 {
-		return errors.New("no arguments passed")
-	}
-
-	arg := o[0]
-	switch s.(type) {
-	case float32, float64:
-		val, _ := getFloat(s)
-		f, ok := getFloat(arg)
-		if !ok {
-			return typeMismatch(s, arg)
-		}
-		if val == f {
-			return nil
-		}
-	case int, int8, int16, int32, int64:
-		val, _ := getInt(s)
-		f, ok := getInt(arg)
-		if !ok {
-			return typeMismatch(s, arg)
-		}
-		if val == f {
-			return nil
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		val, _ := getUInt(s)
-		f, ok := getUInt(arg)
-		if !ok {
-			of, ok := getInt(arg)
+	comparison := newComparison(&cmp{
+		float: func(have float64, exp []interface{}) (bool, error) {
+			f, ok := getFloat(exp[0])
 			if !ok {
-				return typeMismatch(s, arg)
+				return false, typeMismatch(s, exp[0])
 			}
+			return have == f, nil
+		},
+		int: func(have int64, exp []interface{}) (bool, error) {
+			f, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return have == f, nil
+		},
+		uint: func(have uint64, exp []interface{}) (bool, error) {
+			f, ok := getUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
 
-			f = uint64(of)
-		}
-		if val == f {
-			return nil
-		}
-	case string:
-		val, _ := s.(string)
-		f := getString(arg)
-		if val == f {
-			return nil
-		}
-	default:
-		return fmt.Errorf("can't check eq of type %v", reflect.TypeOf(s).String())
+			}
+			return have == f, nil
+		},
+		string: func(have string, exp []interface{}) (bool, error) {
+			return have == getString(exp[0]), nil
+		},
+	})
+
+	ok, err := comparison.do(s, o)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("%v is not equal to %v", s, arg)
+	if !ok {
+		return fmt.Errorf("%v is not equal to %v", s, o[0])
+	}
+
+	return nil
 }
 
 func neq(s interface{}, o []interface{}) error {
-	if len(o) == 0 {
-		return errors.New("no arguments passed")
-	}
-
-	arg := o[0]
-	switch s.(type) {
-	case float32, float64:
-		val, _ := getFloat(s)
-		f, ok := getFloat(arg)
-		if !ok {
-			return typeMismatch(s, arg)
-		}
-		if val != f {
-			return nil
-		}
-	case int, int8, int16, int32, int64:
-		val, _ := getInt(s)
-		f, ok := getInt(arg)
-		if !ok {
-			return typeMismatch(s, arg)
-		}
-		if val != f {
-			return nil
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		val, _ := getUInt(s)
-		f, ok := getUInt(arg)
-		if !ok {
-			of, ok := getInt(arg)
+	comparison := newComparison(&cmp{
+		float: func(have float64, exp []interface{}) (bool, error) {
+			f, ok := getFloat(exp[0])
 			if !ok {
-				return typeMismatch(s, arg)
+				return false, typeMismatch(s, exp[0])
 			}
+			return have != f, nil
+		},
+		int: func(have int64, exp []interface{}) (bool, error) {
+			f, ok := getInt(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+			return have != f, nil
+		},
+		uint: func(have uint64, exp []interface{}) (bool, error) {
+			f, ok := getUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
 
-			f = uint64(of)
-		}
-		if val != f {
-			return nil
-		}
-	case string:
-		val, _ := s.(string)
-		f := getString(arg)
-		if val != f {
-			return nil
-		}
-	default:
-		return fmt.Errorf("can't check eq of type %v", reflect.TypeOf(s).String())
+			}
+			return have != f, nil
+		},
+		string: func(have string, exp []interface{}) (bool, error) {
+			return have != getString(exp[0]), nil
+		},
+	})
+
+	ok, err := comparison.do(s, o)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("%v is equal to %v", s, o[0])
 	}
 
-	return fmt.Errorf("%v is equal to %v", s, arg)
+	return nil
 }

@@ -93,8 +93,6 @@ func TestValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := v.Validate(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				fmt.Println(reflect.ValueOf(got).Elem())
-				fmt.Println(reflect.ValueOf(tt.want).Elem())
 				t.Errorf("Vali.Validate() = %v, want %v", got, tt.want)
 			}
 		})

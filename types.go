@@ -23,6 +23,20 @@ func getUInt(s interface{}) (uint64, bool) {
 	}
 }
 
+func getUIntFallback(s interface{}) (uint64, bool) {
+	switch s.(type) {
+	case uint, uint8, uint16, uint32, uint64:
+		return interfaceToReflectVal(s).Uint(), true
+	default:
+		val, ok := getInt(s)
+		if !ok {
+			return 0, false
+		}
+
+		return uint64(val), true
+	}
+}
+
 func getFloat(s interface{}) (float64, bool) {
 	switch s.(type) {
 	case float32, float64:

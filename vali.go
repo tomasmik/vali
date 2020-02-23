@@ -71,7 +71,6 @@ func New() *Vali {
 			oneofTag:           oneof,
 			eqTag:              eq,
 			neqTag:             neq,
-			optionalTag:        optional,
 		},
 	}
 }

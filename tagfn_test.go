@@ -106,6 +106,9 @@ func TestNeq(t *testing.T) {
 	type mock4 struct {
 		First string `vali:"neq=1"`
 	}
+	type mock5 struct {
+		First uint `vali:"neq=1"`
+	}
 	type args struct {
 		s interface{}
 	}
@@ -177,6 +180,24 @@ func TestNeq(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test 'neq' using mock5, value is equal, should error",
+			args: args{
+				s: &mock5{
+					First: 1,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'neq' using mock5, value is not equal, should not error",
+			args: args{
+				s: &mock5{
+					First: 2,
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	v := New()
@@ -201,6 +222,9 @@ func TestEq(t *testing.T) {
 	}
 	type mock4 struct {
 		First string `vali:"eq=1"`
+	}
+	type mock5 struct {
+		First uint `vali:"eq=1"`
 	}
 	type args struct {
 		s interface{}
@@ -273,6 +297,24 @@ func TestEq(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test 'eq' using mock5, value is equal, should not error",
+			args: args{
+				s: &mock5{
+					First: 1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'eq' using mock5, value is not equal, should error",
+			args: args{
+				s: &mock5{
+					First: 2,
+				},
+			},
+			wantErr: true,
+		},
 	}
 	v := New()
 	for _, tt := range tests {
@@ -296,6 +338,9 @@ func TestOneOf(t *testing.T) {
 	}
 	type mock4 struct {
 		First string `vali:"one_of=a,4,c"`
+	}
+	type mock5 struct {
+		First uint `vali:"one_of=1,2,3"`
 	}
 	type args struct {
 		s interface{}
@@ -360,6 +405,24 @@ func TestOneOf(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "test 'one_of' using mock5, value does have one of, should not error",
+			args: args{
+				s: &mock5{
+					First: 1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'one_of' using mock5, value does have one of, should error",
+			args: args{
+				s: &mock5{
+					First: 5,
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "test 'one_of' using mock4, type mismatch, should error",
 			args: args{
 				s: &mock3{
@@ -406,6 +469,9 @@ func TestMax(t *testing.T) {
 	}
 	type mock6 struct {
 		First *int `vali:"max=5"`
+	}
+	type mock7 struct {
+		First uint `vali:"max=5"`
 	}
 	type args struct {
 		s interface{}
@@ -545,6 +611,24 @@ func TestMax(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "test 'max' using mock7, comparing uint with tag, is less, should not return an error",
+			args: args{
+				s: &mock7{
+					First: 4,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'max' using mock7, comparing uint with tag, is more, should return an error",
+			args: args{
+				s: &mock7{
+					First: 6,
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	v := New()
@@ -583,6 +667,9 @@ func TestMin(t *testing.T) {
 	}
 	type mock6 struct {
 		First *int `vali:"min=5"`
+	}
+	type mock7 struct {
+		First uint `vali:"min=5"`
 	}
 	type args struct {
 		s interface{}
@@ -721,6 +808,24 @@ func TestMin(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "test 'min' using mock7, comparing uint with tag, is less, should return an error",
+			args: args{
+				s: &mock7{
+					First: 4,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'min' using mock7, comparing uint with tag, is more, should not return an error",
+			args: args{
+				s: &mock7{
+					First: 6,
+				},
+			},
+			wantErr: false,
 		},
 	}
 

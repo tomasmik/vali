@@ -132,7 +132,12 @@ func min(s interface{}, o []interface{}) error {
 		val, _ := getUInt(s)
 		more, ok := getUInt(ov)
 		if !ok {
-			return typeMismatch(s, ov)
+			of, ok := getInt(ov)
+			if !ok {
+				return typeMismatch(s, ov)
+			}
+
+			more = uint64(of)
 		}
 		if val < more {
 			return fmt.Errorf("%d is less than %d", val, more)
@@ -194,8 +199,14 @@ func max(s interface{}, o []interface{}) error {
 		val, _ := getUInt(s)
 		less, ok := getUInt(ov)
 		if !ok {
-			return typeMismatch(s, ov)
+			of, ok := getInt(ov)
+			if !ok {
+				return typeMismatch(s, less)
+			}
+
+			less = uint64(of)
 		}
+
 		if val > less {
 			return fmt.Errorf("%d is more than %d", val, less)
 		}
@@ -257,7 +268,17 @@ func oneof(s interface{}, o []interface{}) error {
 		for _, arg := range o {
 			f, ok := getUInt(arg)
 			if !ok {
-				return typeMismatch(s, arg)
+				of, ok := getInt(arg)
+				if !ok {
+					of, ok := getInt(arg)
+					if !ok {
+						return typeMismatch(s, arg)
+					}
+
+					f = uint64(of)
+				}
+
+				f = uint64(of)
 			}
 			if val == f {
 				return nil
@@ -277,6 +298,9 @@ func oneof(s interface{}, o []interface{}) error {
 	return fmt.Errorf("must have at least one of oneof %v", o)
 }
 
+// maybe it's worth to change this to something more simple in the future.
+// `deepEqual` would probably work too, but then we would make it harder to parse
+// slices and maps in the future.
 func eq(s interface{}, o []interface{}) error {
 	if len(o) == 0 {
 		return errors.New("no arguments passed")
@@ -306,7 +330,12 @@ func eq(s interface{}, o []interface{}) error {
 		val, _ := getUInt(s)
 		f, ok := getUInt(arg)
 		if !ok {
-			return typeMismatch(s, arg)
+			of, ok := getInt(arg)
+			if !ok {
+				return typeMismatch(s, arg)
+			}
+
+			f = uint64(of)
 		}
 		if val == f {
 			return nil
@@ -352,7 +381,12 @@ func neq(s interface{}, o []interface{}) error {
 		val, _ := getUInt(s)
 		f, ok := getUInt(arg)
 		if !ok {
-			return typeMismatch(s, arg)
+			of, ok := getInt(arg)
+			if !ok {
+				return typeMismatch(s, arg)
+			}
+
+			f = uint64(of)
 		}
 		if val != f {
 			return nil

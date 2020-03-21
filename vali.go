@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	// valiTag is a tag we look for in a struct field.
-	// If the field has this tag, then we validate it.
+	// valiTag is the default string that is used
+	// to tag interfaces values for validation.
 	valiTag = "vali"
 	// equals is a sign used to add values to a tag.
 	equalsSep = "="
@@ -55,14 +55,16 @@ type TypeFunc func(s interface{}) error
 // as no thread safety exists, so using and editting validation funcs
 // will result in a race condition.
 type Vali struct {
-	tags  tags
-	types types
+	tags   tags
+	types  types
+	tgName string
 }
 
 // New returns a new validator instance.
 func New() *Vali {
 	return &Vali{
-		types: map[reflect.Type]TypeFunc{},
+		tgName: valiTag,
+		types:  map[reflect.Type]TypeFunc{},
 		tags: map[string]TagFunc{
 			requiredTag:        required,
 			requiredWithoutTag: required_without,
@@ -134,7 +136,7 @@ func (v *Vali) Validate(s interface{}) error {
 			}
 		}
 
-		tags := extractTags(val, i)
+		tags := extractTags(val, v.tgName, i)
 		if len(tags) == 0 {
 			continue
 		}
@@ -221,4 +223,10 @@ func (v *Vali) SetTypeValidation(typ interface{}, fn TypeFunc) {
 	}
 
 	v.types[val.Type()] = fn
+}
+
+// RenameTag can be used to change the default `valiTag`
+// string to your own for marking struct fields for validation.
+func (v *Vali) RenameTag(t string) {
+	v.tgName = t
 }

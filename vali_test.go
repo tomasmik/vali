@@ -262,3 +262,75 @@ func TestValiSetTypeValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestRenameTag(t *testing.T) {
+	strEmpty := ""
+	str := "mock"
+	otherTag := "other"
+	type args struct {
+		s interface{}
+	}
+	type mock1 struct {
+		Str string `vali:"required"`
+	}
+	type mock2 struct {
+		Str string `other:"required"`
+	}
+	v := New()
+
+	for _, tt := range []struct {
+		name    string
+		tag     string
+		args    args
+		wantErr bool
+	}{
+
+		{
+			name: "test required using default tag, Str empty should error",
+			tag:  valiTag,
+			args: args{
+				s: &mock1{
+					Str: strEmpty,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test required using default tag, Str not empty should not error",
+			tag:  valiTag,
+			args: args{
+				s: &mock1{
+					Str: str,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test required using default tag, Str empty should error",
+			tag:  otherTag,
+			args: args{
+				s: &mock2{
+					Str: strEmpty,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test required using default tag, Str not empty should not error",
+			tag:  otherTag,
+			args: args{
+				s: &mock2{
+					Str: str,
+				},
+			},
+			wantErr: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			v.RenameTag(tt.tag)
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

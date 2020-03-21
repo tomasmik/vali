@@ -65,7 +65,7 @@ func Test_extractTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := extractTags(tt.args.mainStruct, tt.args.fieldIndex); !reflect.DeepEqual(got, tt.want) {
+			if got := extractTags(tt.args.mainStruct, valiTag, tt.args.fieldIndex); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("extractTags() = %v, want %v", got, tt.want)
 			}
 		})

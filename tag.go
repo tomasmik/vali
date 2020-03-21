@@ -12,9 +12,9 @@ type tag struct {
 	args []interface{}
 }
 
-func extractTags(mainStruct reflect.Value, fieldIndex int) []tag {
+func extractTags(mainStruct reflect.Value, tgName string, fieldIndex int) []tag {
 	tgs := make([]tag, 0)
-	vtag := mainStruct.Type().Field(fieldIndex).Tag.Get(valiTag)
+	vtag := mainStruct.Type().Field(fieldIndex).Tag.Get(tgName)
 	// Dont validate fields which have no tags
 	if vtag == "" || vtag == "-" {
 		return tgs

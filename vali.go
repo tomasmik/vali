@@ -128,7 +128,7 @@ func (v *Vali) Validate(s interface{}) error {
 			continue
 		}
 
-		cmp := derefInterface(val.Field(i).Interface())
+		cmp := DerefInterface(val.Field(i).Interface())
 		if reflect.ValueOf(cmp).Kind() == reflect.Struct {
 			ss := val.Field(i).Interface()
 			if ers := v.Validate(&ss); ers != nil {

@@ -46,7 +46,7 @@ func extractTags(mainStruct reflect.Value, tgName string, fieldIndex int) []tag 
 					continue
 				}
 
-				tg.args = append(tg.args, derefInterface(f))
+				tg.args = append(tg.args, DerefInterface(f))
 				continue
 			}
 

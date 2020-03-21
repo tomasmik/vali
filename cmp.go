@@ -35,19 +35,19 @@ func (c *cmp) do(s interface{}, o []interface{}) (bool, error) {
 	}
 	switch s.(type) {
 	case float32, float64:
-		have, _ := getFloat(s)
+		have, _ := GetFloat(s)
 		if c.float != nil {
 			return c.float(have, o)
 		}
 		return true, nil
 	case int, int8, int16, int32, int64:
-		have, _ := getInt(s)
+		have, _ := GetInt(s)
 		if c.int != nil {
 			return c.int(have, o)
 		}
 		return true, nil
 	case uint, uint8, uint16, uint32, uint64:
-		have, _ := getUInt(s)
+		have, _ := GetUInt(s)
 		if c.uint != nil {
 			return c.uint(have, o)
 		}

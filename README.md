@@ -34,7 +34,7 @@ As mentioned the package allows the user to define tags which
 behave as defined by the package itself or the user.
 The tags to do have a syntax which is essential when using them.
 
-* Fields with no `vali` tag or with `vali:"-"` will be ignored
+* Fields with no `vali` tag or with `vali:"-"` will be ignored (user can change `vali` to any tag he wants)
 * Seperating validators can be done with the `|` symbol - `vali:"required|min=1|max=5"`
 * Pointing to other struct fields can be do by using the `*` symbol - `vali:"required_without=*Foo"`
 * Seperating validator values can be done by using the `,` symbol - `vali:"required|one_of=1,2,3"`
@@ -62,6 +62,24 @@ Validate that `Second` is less than First (note that it returns `false` if First
 	}
 ```
 
+#### Utils 
+
+`utils.go` file exposes certain util functions that are used in the package itself
+and can be used by the package user if any shortcuts are needed for type conversion.
+
+List of util functions which are exposed:
+
+```go
+func GetInt(s interface{}) (int64, bool)
+func GetUInt(s interface{}) (uint64, bool) 
+func GetUIntFallback(s interface{}) (uint64, bool)
+func GetFloat(s interface{}) (float64, bool)
+func GetString(s interface{}) string 
+func DerefInterface(s interface{}) interface{} 
+```
+
+Documentation for these functions can be found in `utils.go` file.
+
 ## Current state
 
 The package is in it's infancy while it should work
@@ -72,6 +90,7 @@ there are some missing parts that will be added:
 * Better documenation
 * Custom errors
 * `Dive` function to validate the inside of maps/structs using tags
+* Better examples
 
 ## Contributing
 If you want to improve any part of this validator you're free to create a Pull Request or an Issue.

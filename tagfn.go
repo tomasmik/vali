@@ -101,24 +101,24 @@ func required_without(s interface{}, o []interface{}) error {
 func min(s interface{}, o []interface{}) error {
 	comparison := newComparison(&cmp{
 		float: func(have float64, exp []interface{}) (bool, error) {
-			val, _ := getFloat(s)
-			more, ok := getFloat(exp[0])
+			val, _ := GetFloat(s)
+			more, ok := GetFloat(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return val > more, nil
 		},
 		int: func(have int64, exp []interface{}) (bool, error) {
-			val, _ := getInt(s)
-			more, ok := getInt(exp[0])
+			val, _ := GetInt(s)
+			more, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return val > more, nil
 		},
 		uint: func(have uint64, exp []interface{}) (bool, error) {
-			val, _ := getUInt(s)
-			more, ok := getUIntFallback(exp[0])
+			val, _ := GetUInt(s)
+			more, ok := GetUIntFallback(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
@@ -132,7 +132,7 @@ func min(s interface{}, o []interface{}) error {
 			return !have.Before(more), nil
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
-			more, ok := getInt(exp[0])
+			more, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
@@ -155,24 +155,24 @@ func min(s interface{}, o []interface{}) error {
 func max(s interface{}, o []interface{}) error {
 	comparison := newComparison(&cmp{
 		float: func(have float64, exp []interface{}) (bool, error) {
-			val, _ := getFloat(s)
-			more, ok := getFloat(exp[0])
+			val, _ := GetFloat(s)
+			more, ok := GetFloat(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return val <= more, nil
 		},
 		int: func(have int64, exp []interface{}) (bool, error) {
-			val, _ := getInt(s)
-			more, ok := getInt(exp[0])
+			val, _ := GetInt(s)
+			more, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return val <= more, nil
 		},
 		uint: func(have uint64, exp []interface{}) (bool, error) {
-			val, _ := getUInt(s)
-			more, ok := getUIntFallback(exp[0])
+			val, _ := GetUInt(s)
+			more, ok := GetUIntFallback(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
@@ -186,7 +186,7 @@ func max(s interface{}, o []interface{}) error {
 			return have.Before(more), nil
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
-			more, ok := getInt(exp[0])
+			more, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
@@ -210,7 +210,7 @@ func oneof(s interface{}, o []interface{}) error {
 	comparison := newComparison(&cmp{
 		float: func(have float64, exp []interface{}) (bool, error) {
 			for _, arg := range exp {
-				f, ok := getFloat(arg)
+				f, ok := GetFloat(arg)
 				if !ok {
 					return false, typeMismatch(s, arg)
 				}
@@ -222,7 +222,7 @@ func oneof(s interface{}, o []interface{}) error {
 		},
 		int: func(have int64, exp []interface{}) (bool, error) {
 			for _, arg := range exp {
-				f, ok := getInt(arg)
+				f, ok := GetInt(arg)
 				if !ok {
 					return false, typeMismatch(s, arg)
 				}
@@ -234,7 +234,7 @@ func oneof(s interface{}, o []interface{}) error {
 		},
 		uint: func(have uint64, exp []interface{}) (bool, error) {
 			for _, arg := range exp {
-				f, ok := getUIntFallback(arg)
+				f, ok := GetUIntFallback(arg)
 				if !ok {
 					return false, typeMismatch(s, arg)
 
@@ -247,7 +247,7 @@ func oneof(s interface{}, o []interface{}) error {
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
 			for _, arg := range o {
-				f := getString(arg)
+				f := GetString(arg)
 				if have == f {
 					return true, nil
 				}
@@ -270,21 +270,21 @@ func oneof(s interface{}, o []interface{}) error {
 func eq(s interface{}, o []interface{}) error {
 	comparison := newComparison(&cmp{
 		float: func(have float64, exp []interface{}) (bool, error) {
-			f, ok := getFloat(exp[0])
+			f, ok := GetFloat(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return have == f, nil
 		},
 		int: func(have int64, exp []interface{}) (bool, error) {
-			f, ok := getInt(exp[0])
+			f, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return have == f, nil
 		},
 		uint: func(have uint64, exp []interface{}) (bool, error) {
-			f, ok := getUIntFallback(exp[0])
+			f, ok := GetUIntFallback(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 
@@ -292,7 +292,7 @@ func eq(s interface{}, o []interface{}) error {
 			return have == f, nil
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
-			return have == getString(exp[0]), nil
+			return have == GetString(exp[0]), nil
 		},
 	})
 
@@ -310,21 +310,21 @@ func eq(s interface{}, o []interface{}) error {
 func neq(s interface{}, o []interface{}) error {
 	comparison := newComparison(&cmp{
 		float: func(have float64, exp []interface{}) (bool, error) {
-			f, ok := getFloat(exp[0])
+			f, ok := GetFloat(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return have != f, nil
 		},
 		int: func(have int64, exp []interface{}) (bool, error) {
-			f, ok := getInt(exp[0])
+			f, ok := GetInt(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 			}
 			return have != f, nil
 		},
 		uint: func(have uint64, exp []interface{}) (bool, error) {
-			f, ok := getUIntFallback(exp[0])
+			f, ok := GetUIntFallback(exp[0])
 			if !ok {
 				return false, typeMismatch(s, exp[0])
 
@@ -332,7 +332,7 @@ func neq(s interface{}, o []interface{}) error {
 			return have != f, nil
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
-			return have != getString(exp[0]), nil
+			return have != GetString(exp[0]), nil
 		},
 	})
 

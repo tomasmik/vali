@@ -18,11 +18,6 @@ func newAggErr() *AggErr {
 	}
 }
 
-func (e *AggErr) addErr(err ...error) *AggErr {
-	e.Sl = append(e.Sl, err...)
-	return e
-}
-
 func (e *AggErr) Error() string {
 	var s string
 	for i, err := range e.Sl {
@@ -32,6 +27,11 @@ func (e *AggErr) Error() string {
 		}
 	}
 	return s
+}
+
+func (e *AggErr) addErr(err ...error) *AggErr {
+	e.Sl = append(e.Sl, err...)
+	return e
 }
 
 func (e *AggErr) toError() error {

@@ -19,10 +19,14 @@ func newAggErr() *AggErr {
 }
 
 func (e *AggErr) Error() string {
+	if len(e.Sl) == 1 {
+		return e.Sl[0].Error()
+	}
+
 	var s string
 	for i, err := range e.Sl {
-		s = err.Error()
-		if len(e.Sl)-1 != i {
+		s += err.Error()
+		if i < len(e.Sl)-1 {
 			s += "\n"
 		}
 	}

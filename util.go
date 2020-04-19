@@ -77,6 +77,20 @@ func DerefInterface(s interface{}) interface{} {
 	return in
 }
 
+func derefReflectValue(v reflect.Value) (reflect.Value, bool) {
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		if v.IsNil() {
+			return reflect.Zero(v.Type()), false
+		}
+
+		v = v.Elem()
+		return derefReflectValue(v)
+	default:
+		return v, true
+	}
+}
+
 func interfaceToReflectVal(s interface{}) reflect.Value {
 	v, ok := s.(reflect.Value)
 	if !ok {

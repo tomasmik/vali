@@ -326,6 +326,114 @@ func TestEq(t *testing.T) {
 	}
 }
 
+func TestNoneOf(t *testing.T) {
+	type mock struct {
+		First int `vali:"none_of=1,2,3"`
+	}
+	type mock2 struct {
+		First float64 `vali:"none_of=1.0,2.0,3.0"`
+	}
+	type mock3 struct {
+		First string `vali:"none_of=a,b,c"`
+	}
+	type mock4 struct {
+		First string `vali:"none_of= a,4,c"`
+	}
+	type mock5 struct {
+		First uint `vali:"none_of=1,2,3"`
+	}
+	type args struct {
+		s interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test 'none_of' using mock, value does not have one of, should not error",
+			args: args{
+				s: &mock{
+					First: 5,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'none_of' using mock, value does have one of, should error",
+			args: args{
+				s: &mock{
+					First: 2,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'none_of' using mock2, value does not have one of, should not error",
+			args: args{
+				s: &mock2{
+					First: 5.0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'none_of' using mock2, value does have one of, should error",
+			args: args{
+				s: &mock2{
+					First: 2.0,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'none_of' using mock3, value does not have one of, should not error",
+			args: args{
+				s: &mock3{
+					First: "xxx",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'none_of' using mock3, value does have one of, should error",
+			args: args{
+				s: &mock3{
+					First: "b",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'none_of' using mock5, value does have one of, should error",
+			args: args{
+				s: &mock5{
+					First: 1,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'none_of' using mock5, value does have one of, should not error",
+			args: args{
+				s: &mock5{
+					First: 5,
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	v := New()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestOneOf(t *testing.T) {
 	type mock struct {
 		First int `vali:"one_of=1,2,3"`

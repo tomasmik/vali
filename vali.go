@@ -71,6 +71,7 @@ func New() *Vali {
 			maxTag:             max,
 			minTag:             min,
 			oneofTag:           oneof,
+			noneofTag:          noneof,
 			eqTag:              eq,
 			neqTag:             neq,
 		},

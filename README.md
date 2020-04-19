@@ -22,6 +22,7 @@ Currently Vali comes with premade validation tags:
 * min
 * max
 * one_of
+* none_of
 * eq
 * neq
 

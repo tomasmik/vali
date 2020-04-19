@@ -5,6 +5,8 @@ Main idea of this validator is that it's small, easily extendable and doesn't br
 an excessive amount of validators that most people do not need. Instead it
 encourages the user to add validator that he himself needs if the default ones are not enough.
 
+For documentation explore the tests, comments and [godoc](https://pkg.go.dev/github.com/tomasmik/vali?tab=doc)
+
 ## Install
 
 With a [correctly configured](https://golang.org/doc/install#testing) Go toolchain:

@@ -74,6 +74,7 @@ func New() *Vali {
 			noneofTag:          noneof,
 			eqTag:              eq,
 			neqTag:             neq,
+			optionalTag:        optional,
 		},
 	}
 }
@@ -148,24 +149,18 @@ func (v *Vali) Validate(s interface{}) error {
 			continue
 		}
 
-		if _, ok := m[optionalTag]; ok {
-			// Nil is fine
-			if cmp == nil {
-				continue
-			}
-
-			if err := required(cmp, nil); err != nil {
-				// Empty is fine
-				continue
-			}
-		}
-
 		for _, t := range tags {
 			fn, ok := v.tags[t.name]
 			if !ok {
 				// no such tag
 				// TODO consider throwing an error here
 				continue
+			}
+			// If a field is optional and is equal to nil
+			// we can just return here as we no longer care
+			// about it's validation
+			if t.name == optionalTag && cmp == nil {
+				return nil
 			}
 
 			if err := fn(cmp, t.args); err != nil {

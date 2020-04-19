@@ -17,13 +17,6 @@ const (
 	// Only 1 required_without tag is allowed and a field cannot have
 	// a mix of required, required_without, optional.
 	requiredWithoutTag = "required_without"
-	// optionalTag can be used to tag a struct field making
-	// it not fail validation if it's empty or nil.
-	// Only 1 optional tag is allowed and a field cannot have
-	// a mix of required, required_without, optional.
-	//
-	// This is a special tag as it's not a part of the tags map
-	optionalTag = "optional"
 	// maxTag can be used to tag a struct field making
 	// it fail validation if the field is more than max.
 	maxTag = "max"
@@ -44,7 +37,16 @@ const (
 	// neqTag can be used to tag a struct field making
 	// it fail validation if the field is equal to a given value or field.
 	neqTag = "neq"
+	// optionalTag can be used to tag a struct field making
+	// it not fail validation if it's empty or nil.
+	// Only 1 optional tag is allowed and a field cannot have
+	// a mix of required, required_without, optional.
+	optionalTag = "optional"
 )
+
+func optional(s interface{}, o []interface{}) error {
+	return nil
+}
 
 func required(s interface{}, o []interface{}) error {
 	v := interfaceToReflectVal(s)

@@ -228,6 +228,12 @@ func (v *Vali) SetTypeValidation(typ interface{}, fn TypeFunc) {
 
 // RenameTag can be used to change the default `valiTag`
 // string to your own for marking struct fields for validation.
+//
+// Empty strings as `t` values are ignored
 func (v *Vali) RenameTag(t string) {
+	if t == "" {
+		return
+	}
+
 	v.tgName = t
 }

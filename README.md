@@ -1,4 +1,5 @@
 # vali
+[![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
 
 Vali is yet another validation package which strives to be different from others.
 Main idea of this validator is that it's small, easily extendable and doesn't bring

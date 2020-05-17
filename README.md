@@ -29,19 +29,29 @@ Currently Vali comes with premade validation tags:
 * eq
 * neq
 
-Multiple validation tags can be added for a single struct field
-and you're allow to validate against given values or other struct fields.
+Tags behavior:
+* Multiple validation tags can be added for a single struct field.
+* Validation tags are applied in order so you can chain them however you like.
+
+Special tags:
+* `>` - Allows you to validate the contents of a slice/array.
+* `*` - Allows you to point to another struct field to validate against or with it.
 
 ## Basic usage
 
+You can create a new validator with the `func New()` which will also pre-seed it with default
+validation funcs or with `func NewEmpty()` which will return an empty validator instance
+allowing you to define the validation workflow yourself.
+
 As mentioned the package allows the user to define tags which
 behave as defined by the package itself or the user.
-The tags to do have a syntax which is essential when using them.
+The tags do have a syntax which is essential when using them.
 
 * Fields with no `vali` tag or with `vali:"-"` will be ignored (user can change `vali` to any tag he wants)
 * Seperating validators can be done with the `|` symbol - `vali:"required|min=1|max=5"`
 * Pointing to other struct fields can be do by using the `*` symbol - `vali:"required_without=*Foo"`
 * Seperating validator values can be done by using the `,` symbol - `vali:"required|one_of=1,2,3"`
+* Validating slice and array elements is also possible (though a little experimental) by adding `>` to the validation tag - `vali:">|one_of=1,2"`
 
 **Fields must be exported (or else they're ignored) and validate method only accepts pointers to structs**
 
@@ -63,6 +73,16 @@ Validate that `Second` is less than First (note that it returns `false` if First
 	type foo struct {
 		First  *int
 		Second int `vali:"max=*First"`
+	}
+```
+
+#### Tag Example 3
+
+Validate that a slice length is more than the `min` amount of elements and all of them fit the `one_of` tag
+
+```go
+	type foo struct {
+		First []string `vali:"min=2|>|one_of=a,b"`
 	}
 ```
 
@@ -93,7 +113,6 @@ there are some missing parts that will be added:
 * More tests
 * Better documenation
 * Custom errors
-* `Dive` function to validate the inside of maps/structs using tags
 * Better examples
 
 ## Contributing

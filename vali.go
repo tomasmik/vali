@@ -18,14 +18,24 @@ const (
 	tagSep = "|"
 	// pointerToField to a field is used when you want to compare
 	// one field to another.
-	// For example:
-	//  type mock struct {
-	//  Str  string `vali:"-"`
-	//  Str2 string `vali:"required_without=*Str"`
-	//  }
+	// Example:
+	/*
+	 type mock struct {
+	 Str  string `vali:"-"`
+	 Str2 string `vali:"required_without=*Str"`
+	 }
+	*/
 	// The *Str points to another struct value, so there values
 	// will be compared.
 	pointerToField = "*"
+	// dive in to a slice, validating the contents
+	// Example:
+	/*
+	 type mock struct {
+	 Str2 []string `vali:"min=2|>|one_of=a,b,c"`
+	 }
+	*/
+	dive = ">"
 )
 
 // tags if a type of map which holds all tag validation funcs
@@ -60,7 +70,8 @@ type Vali struct {
 	tgName string
 }
 
-// New returns a new validator instance.
+// New returns a new validator instance,
+// with the default predefined types.
 func New() *Vali {
 	return &Vali{
 		tgName: valiTag,
@@ -79,6 +90,16 @@ func New() *Vali {
 	}
 }
 
+// NewEmpty returns a new vali validator without
+// any predefined tags allowing the user to configure whatever he needs.
+func NewEmpty() *Vali {
+	return &Vali{
+		tgName: valiTag,
+		types:  map[reflect.Type]TypeFunc{},
+		tags:   map[string]TagFunc{},
+	}
+}
+
 // Validate accepts a struct and validates its according to the given tags.
 // Validations are applied in this order:
 // 1. Type validation if one is set.
@@ -88,11 +109,11 @@ func New() *Vali {
 // which allows to explore each error seprately.
 // Example:
 /*
-`
+
         // In the real world you would define the vali.New() before calling
         // the `Validate()` method.
 	err := vali.New().Validate(str)
-`
+
 */
 func (v *Vali) Validate(s interface{}) error {
 	errs := newAggErr()
@@ -130,14 +151,6 @@ func (v *Vali) Validate(s interface{}) error {
 			continue
 		}
 
-		cmp := DerefInterface(val.Field(i).Interface())
-		if reflect.ValueOf(cmp).Kind() == reflect.Struct {
-			ss := val.Field(i).Interface()
-			if ers := v.Validate(&ss); ers != nil {
-				errs.addErr(ers)
-			}
-		}
-
 		tags := extractTags(val, v.tgName, i)
 		if len(tags) == 0 {
 			continue
@@ -149,23 +162,25 @@ func (v *Vali) Validate(s interface{}) error {
 			continue
 		}
 
-		for _, t := range tags {
-			fn, ok := v.tags[t.name]
-			if !ok {
-				// no such tag
-				// TODO consider throwing an error here
-				continue
-			}
-			// If a field is optional and is equal to nil
-			// we can just return here as we no longer care
-			// about it's validation
-			if t.name == optionalTag && cmp == nil {
-				return nil
-			}
+		// This is sort of hacky way to allow us to easily
+		// convert between a "dive" validation and a single field
+		// validation.
+		// Maybe it should be improved in the future
+		cmp := []interface{}{
+			DerefInterface(val.Field(i).Interface()),
+		}
 
-			if err := fn(cmp, t.args); err != nil {
-				errs.addErr(tagError(val.Type().Field(i).Name, t.name, err))
+		if derf, ok := derefReflectValue(val.Field(i)); ok {
+			if derf.Kind() == reflect.Struct {
+				ss := val.Field(i).Interface()
+				if ers := v.Validate(&ss); ers != nil {
+					errs.addErr(ers)
+				}
 			}
+		}
+
+		if err := v.validateField(val.Type().Field(i).Name, cmp, tags); err != nil {
+			errs.addErr(err)
 		}
 	}
 
@@ -176,11 +191,11 @@ func (v *Vali) Validate(s interface{}) error {
 // Current tag that has the same name will get over written.
 // Example:
 /*
-`
+
 	v.SetTagValidation("mockTg", func(s interface{}, o []interface{}) error {
 		return nil
 	})
-`
+
 */
 func (v *Vali) SetTagValidation(tag string, fn TagFunc) {
 	if fn == nil || tag == "" {
@@ -196,11 +211,11 @@ func (v *Vali) SetTagValidation(tag string, fn TagFunc) {
 // Setting validation func will override any previous type validation funcs.
 // Example:
 /*
-`
+
 	vali.New().SetTypeValidation(&CustomMock{}, func(s interface{}) error {
 		return nil
 	})
-`
+
 */
 func (v *Vali) SetTypeValidation(typ interface{}, fn TypeFunc) {
 	if typ == nil || fn == nil {
@@ -231,4 +246,57 @@ func (v *Vali) RenameTag(t string) {
 	}
 
 	v.tgName = t
+}
+
+// validateField is a helper method which holds the validation code for a specific
+// field. It calls itself recursively if it finds a dive tag validating
+// the inside of a given `slice` or `array`.
+func (v *Vali) validateField(field string, cmp []interface{}, tags []tag) error {
+	for _, c := range cmp {
+		for i, t := range tags {
+			if t.name == dive {
+				cmp, err := rebuildCmpSlice(cmp[0])
+				if err != nil {
+					return tagError(field, t.name, err)
+				}
+				return v.validateField(field, cmp, tags[i+1:])
+			}
+			fn, ok := v.tags[t.name]
+			if !ok {
+				// no such tag
+				// TODO consider throwing an error here
+				continue
+			}
+			// If a field is optional and is equal to nil
+			// we can just return here as we no longer care
+			// about it's validation
+			if t.name == optionalTag && c == nil {
+				return nil
+			}
+
+			if err := fn(c, t.args); err != nil {
+				return tagError(field, t.name, err)
+			}
+		}
+	}
+	return nil
+}
+
+// rebuildCmpSlice is a helper function to rebuild the comparison
+// slice if possible
+func rebuildCmpSlice(val interface{}) ([]interface{}, error) {
+	derf := interfaceToReflectVal(val)
+	switch derf.Kind() {
+	case reflect.Array, reflect.Slice:
+	default:
+		return nil, errors.New("value is not a slice, can't use it")
+	}
+
+	newcmp := []interface{}{}
+	for j := 0; j < derf.Len(); j++ {
+		newcmp = append(
+			newcmp,
+			DerefInterface(derf.Index(j).Interface()))
+	}
+	return newcmp, nil
 }

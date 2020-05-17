@@ -18,6 +18,12 @@ func TestValidate(t *testing.T) {
 	type mock3 struct {
 		M *Mock `vali:"required"`
 	}
+	type MockArr struct {
+		First []string `vali:"min=2|>|one_of=a,b"`
+	}
+	type MockNotArr struct {
+		First string `vali:">|one_of=a,b"`
+	}
 	var mockFn func()
 	var mockin interface{}
 	ptToPt := &mockin
@@ -41,6 +47,42 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+		{
+			name: "struct has a string prefixed with dive (>), should error",
+			args: args{
+				s: &MockNotArr{
+					First: "a",
+				},
+			},
+			want: newAggErr().addErr(tagError("First", ">", errors.New("value is not a slice, can't use it"))),
+		},
+		{
+			name: "struct has a slice prefixed with dive (>), fields are valid, should not error",
+			args: args{
+				s: &MockArr{
+					First: []string{"a", "b", "a"},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "struct has a slice prefixed with dive (>), fields are not valid, should error",
+			args: args{
+				s: &MockArr{
+					First: []string{"c", "c", "c"},
+				},
+			},
+			want: newAggErr().addErr(tagError("First", oneofTag, errors.New("must have at least one of [a b]"))),
+		},
+		{
+			name: "struct has a slice prefixed with dive (>), length is less than required, should error",
+			args: args{
+				s: &MockArr{
+					First: []string{"a"},
+				},
+			},
+			want: newAggErr().addErr(tagError("First", minTag, errors.New("[a] is less than 2"))),
 		},
 		{
 			name: "struct inside of a struct is not valid, should error",

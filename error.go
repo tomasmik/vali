@@ -5,6 +5,11 @@ import (
 	"reflect"
 )
 
+type a interface {
+	AddError(err ...error)
+	Error() error
+}
+
 // AggErr is a struct which allows the
 // Validate func to stack errors in to a slice
 // but return a single error.

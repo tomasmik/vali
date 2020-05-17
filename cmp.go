@@ -15,6 +15,7 @@ type cmp struct {
 	time     func(have time.Time, exp []interface{}) (bool, error)
 	string   func(have string, exp []interface{}) (bool, error)
 	duration func(have time.Duration, exp []interface{}) (bool, error)
+	slice    func(have interface{}, exp []interface{}) (bool, error)
 }
 
 func (c *cmp) do(s interface{}, o []interface{}) (bool, error) {
@@ -28,44 +29,53 @@ func (c *cmp) do(s interface{}, o []interface{}) (bool, error) {
 	err := func(s string) error {
 		return fmt.Errorf("comparison for %v is not set", s)
 	}
+	// Check using reflect for types that are not easy to cast using an interface
+	switch reflect.ValueOf(s).Kind() {
+	case reflect.Array, reflect.Slice:
+		if c.slice != nil {
+			return c.slice(s, o)
+		}
+		return false, err(reflect.TypeOf(s).String())
+	}
 
+	// Validate types that are easy to cast from an interface
 	switch s.(type) {
 	case float32, float64:
 		have, _ := GetFloat(s)
 		if c.float != nil {
 			return c.float(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	case int, int8, int16, int32, int64:
 		have, _ := GetInt(s)
 		if c.int != nil {
 			return c.int(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	case uint, uint8, uint16, uint32, uint64:
 		have, _ := GetUInt(s)
 		if c.uint != nil {
 			return c.uint(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	case time.Time:
 		have, _ := s.(time.Time)
 		if c.time != nil {
 			return c.time(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	case string:
 		have, _ := s.(string)
 		if c.string != nil {
 			return c.string(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	case time.Duration:
 		have, _ := s.(time.Duration)
 		if c.duration != nil {
 			return c.duration(have, o)
 		}
-		return true, err(reflect.TypeOf(s).String())
+		return false, err(reflect.TypeOf(s).String())
 	default:
 		return false, fmt.Errorf("comparing type %v to other values is not supported", reflect.TypeOf(s).String())
 	}
@@ -164,6 +174,15 @@ func newMinCMP(s interface{}, o []interface{}) *cmp {
 
 			return !(int64(len(have)) < more), nil
 		},
+		slice: func(have interface{}, exp []interface{}) (bool, error) {
+			sl := reflect.ValueOf(have)
+			more, ok := GetUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+
+			return sl.Len() > int(more), nil
+		},
 	}
 }
 
@@ -193,6 +212,15 @@ func newEqualsCMP(s interface{}, o []interface{}) *cmp {
 		},
 		string: func(have string, exp []interface{}) (bool, error) {
 			return have == GetString(exp[0]), nil
+		},
+		slice: func(have interface{}, exp []interface{}) (bool, error) {
+			sl := reflect.ValueOf(have)
+			more, ok := GetUIntFallback(exp[0])
+			if !ok {
+				return false, typeMismatch(s, exp[0])
+			}
+
+			return sl.Len() == int(more), nil
 		},
 	}
 }

@@ -55,7 +55,7 @@ func TestValidate(t *testing.T) {
 					First: "a",
 				},
 			},
-			want: newAggErr().addErr(tagError("First", ">", errors.New("value is not a slice, can't use it"))),
+			want: newAggErr().addErr(newTagError("First", ">", errors.New("value is not a slice, can't use it"))),
 		},
 		{
 			name: "struct has a slice prefixed with dive (>), fields are valid, should not error",
@@ -73,7 +73,7 @@ func TestValidate(t *testing.T) {
 					First: []string{"c", "c", "c"},
 				},
 			},
-			want: newAggErr().addErr(tagError("First", oneofTag, errors.New("must have at least one of [a b]"))),
+			want: newAggErr().addErr(newTagError("First", oneofTag, errors.New("must have at least one of [a b]"))),
 		},
 		{
 			name: "struct has a slice prefixed with dive (>), length is less than required, should error",
@@ -82,7 +82,7 @@ func TestValidate(t *testing.T) {
 					First: []string{"a"},
 				},
 			},
-			want: newAggErr().addErr(tagError("First", minTag, errors.New("[a] is less than 2"))),
+			want: newAggErr().addErr(newTagError("First", minTag, errors.New("[a] is less than 2"))),
 		},
 		{
 			name: "struct inside of a struct is not valid, should error",
@@ -94,7 +94,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			want: newAggErr().addErr(newAggErr().addErr(tagError("First", eqTag, errors.New("b is not equal to a")))),
+			want: newAggErr().addErr(newAggErr().addErr(newTagError("First", eqTag, errors.New("b is not equal to a")))),
 		},
 		{
 			name: "struct is nil, should error",
@@ -247,7 +247,7 @@ func TestValiSetTypeValidation(t *testing.T) {
 					First: 2,
 				},
 			},
-			want: newAggErr().addErr(tagError("First", minTag, fmt.Errorf("%d is less than %d", 2, 4))),
+			want: newAggErr().addErr(newTagError("First", minTag, fmt.Errorf("%d is less than %d", 2, 4))),
 		},
 		{
 			name: "struct is valid, should not error",
@@ -258,7 +258,7 @@ func TestValiSetTypeValidation(t *testing.T) {
 			},
 			want: newAggErr().addErr(
 				errors.New("m.First can't be 3"),
-				tagError("First", minTag, fmt.Errorf("%d is less than %d", 3, 4))),
+				newTagError("First", minTag, fmt.Errorf("%d is less than %d", 3, 4))),
 		},
 	}
 
@@ -375,4 +375,56 @@ func TestRenameTag(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateBubbleErr(t *testing.T) {
+	type myerr error
+	var notA myerr = errors.New("value is not A")
+	type mock struct {
+		First string `vali:"eq_a"`
+	}
+	type args struct {
+		s interface{}
+	}
+	tt := struct {
+		name string
+		args args
+	}{
+		name: "test custom tag to bubble up an error of type 'myerr', should error and return myerr",
+		args: args{
+			s: &mock{
+				First: "2",
+			},
+		},
+	}
+
+	v := New()
+	t.Run("tag validation add one", func(t *testing.T) {
+		v.SetTagValidation("eq_a", func(s interface{}, o []interface{}) error {
+			str, ok := s.(string)
+			if !ok {
+				return errors.New("not a string")
+			}
+			if str != "a" {
+				return BubbleErr(notA)
+			}
+
+			return nil
+		})
+
+		if _, ok := v.tags["eq_a"]; !ok {
+			t.Error("expected to find tag `eq_a`")
+		}
+	})
+
+	t.Run(tt.name, func(t *testing.T) {
+		err := v.Validate(tt.args.s)
+		if err == nil {
+			t.Error("Expected to receive an error")
+		}
+		fmt.Println(err)
+		if !errors.Is(err, notA) {
+			t.Error("Expected to receive error type 'myerr'")
+		}
+	})
 }

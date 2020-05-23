@@ -70,6 +70,11 @@ type Vali struct {
 	tgName string
 }
 
+// ErrSkipFurther is an error that can be used as a return value
+// when validating struct field. If it's returned further validation
+// is skipped
+var ErrSkipFurther = errors.New("skip further")
+
 // New returns a new validator instance,
 // with the default predefined types.
 func New() *Vali {
@@ -85,6 +90,7 @@ func New() *Vali {
 			noneofTag:          noneof,
 			eqTag:              eq,
 			neqTag:             neq,
+			dupsTag:            dups,
 			optionalTag:        optional,
 		},
 	}
@@ -180,7 +186,16 @@ func (v *Vali) Validate(s interface{}) error {
 		}
 
 		if err := v.validateField(val.Type().Field(i).Name, cmp, tags); err != nil {
-			errs.addErr(err)
+			var b *bubbleErr
+			var e *tagError
+
+			if errors.As(err, &b) {
+				return b.err
+			} else if errors.As(err, &e) {
+				errs.addErr(e)
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -189,6 +204,7 @@ func (v *Vali) Validate(s interface{}) error {
 
 // SetTagValidation allows to create a new tag and use it for validation.
 // Current tag that has the same name will get over written.
+// You can return custom errors from custom tags by returning a BubbleErr.
 // Example:
 /*
 
@@ -209,6 +225,7 @@ func (v *Vali) SetTagValidation(tag string, fn TagFunc) {
 // *T will get rendered down to T, so *T and T will have the same
 // validation type func set.
 // Setting validation func will override any previous type validation funcs.
+// You can return custom errors from custom tags by returning a BubbleErr.
 // Example:
 /*
 
@@ -257,7 +274,7 @@ func (v *Vali) validateField(field string, cmp []interface{}, tags []tag) error 
 			if t.name == dive {
 				cmp, err := rebuildCmpSlice(cmp[0])
 				if err != nil {
-					return tagError(field, t.name, err)
+					return newTagError(field, t.name, err)
 				}
 				return v.validateField(field, cmp, tags[i+1:])
 			}
@@ -267,15 +284,17 @@ func (v *Vali) validateField(field string, cmp []interface{}, tags []tag) error 
 				// TODO consider throwing an error here
 				continue
 			}
-			// If a field is optional and is equal to nil
-			// we can just return here as we no longer care
-			// about it's validation
-			if t.name == optionalTag && c == nil {
-				return nil
-			}
 
 			if err := fn(c, t.args); err != nil {
-				return tagError(field, t.name, err)
+				if errors.Is(err, ErrSkipFurther) {
+					return nil
+				}
+
+				var b *bubbleErr
+				if errors.As(err, &b) {
+					return b
+				}
+				return newTagError(field, t.name, err)
 			}
 		}
 	}

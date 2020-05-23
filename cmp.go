@@ -19,8 +19,8 @@ type cmp struct {
 }
 
 func (c *cmp) do(s interface{}, o []interface{}) (bool, error) {
-	if o == nil || len(o) == 0 {
-		return false, errors.New("nothing to compare against, [o] is empty or nil")
+	if o == nil {
+		return false, errors.New("nothing to compare against, [o] is nil")
 	}
 	if s == nil {
 		return false, errors.New("can't compare if base value [s] nil")

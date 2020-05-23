@@ -949,10 +949,15 @@ func TestMin(t *testing.T) {
 
 func TestRequiredWithout(t *testing.T) {
 	str := "str"
+	strA := "a"
 	strEmpty := ""
 	type mock struct {
 		Str  string `vali:"-"`
 		Str2 string `vali:"required_without=*Str"`
+	}
+	type mock2 struct {
+		Str  string `vali:"-"`
+		Str2 string `vali:"required_without=*Str|eq=a"`
 	}
 	type args struct {
 		s interface{}
@@ -987,6 +992,26 @@ func TestRequiredWithout(t *testing.T) {
 			args: args{
 				s: &mock{
 					Str:  strEmpty,
+					Str2: strEmpty,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test 'required_without', Str empty Str2 required validation should not skip, should error",
+			args: args{
+				s: &mock2{
+					Str:  strEmpty,
+					Str2: strA,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test 'required_without', Str not empty Str2 not required, validation should skip",
+			args: args{
+				s: &mock2{
+					Str:  str,
 					Str2: strEmpty,
 				},
 			},
@@ -1079,6 +1104,101 @@ func TestRequired(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+	}
+
+	v := New()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := v.Validate(tt.args.s); (err != nil) != tt.wantErr {
+				t.Errorf("Vali.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDups(t *testing.T) {
+	type mock struct {
+		Sl []string `vali:"dups"`
+	}
+	type mock2 struct {
+		Sl []int `vali:"dups"`
+	}
+	type mock3 struct {
+		Sl []*int `vali:"dups"`
+	}
+	val1 := 1
+	val2 := 2
+	type args struct {
+		s interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test string slice with dups, should not error",
+			args: args{
+				s: &mock{
+					Sl: []string{"a", "b"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test string slice with dups, should error",
+			args: args{
+				s: &mock{
+					Sl: []string{"a", "a"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test int slice no dups, should not error",
+			args: args{
+				s: &mock2{
+					Sl: []int{1, 2},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test int slice, with dups, should error",
+			args: args{
+				s: &mock2{
+					Sl: []int{1, 1},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test *int slice, with dups, should not error",
+			args: args{
+				s: &mock3{
+					Sl: []*int{&val1, &val2},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test *int slice, with dups, should error",
+			args: args{
+				s: &mock3{
+					Sl: []*int{&val1, &val1},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test *int slice, with dups, with nils, should not error",
+			args: args{
+				s: &mock3{
+					Sl: []*int{&val1, nil, &val2},
+				},
+			},
+			wantErr: false,
 		},
 	}
 

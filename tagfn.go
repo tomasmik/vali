@@ -42,9 +42,41 @@ const (
 	// Only 1 optional tag is allowed and a field cannot have
 	// a mix of required, required_without, optional.
 	optionalTag = "optional"
+	// dupsTag can be used to tag a struct field making
+	// it fail validation if it has duplicate values.
+	dupsTag = "dups"
 )
 
+func dups(s interface{}, o []interface{}) error {
+	c := &cmp{
+		slice: func(have interface{}, exp []interface{}) (bool, error) {
+			dups := map[interface{}]struct{}{}
+			v := reflect.ValueOf(have)
+			for i := 0; i < v.Len(); i++ {
+				dups[v.Index(i).Interface()] = struct{}{}
+			}
+			if len(dups) != v.Len() {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	}
+	ok, err := c.do(s, o)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("no duplicates allowed")
+	}
+
+	return nil
+}
+
 func optional(s interface{}, o []interface{}) error {
+	if required(s, o) != nil {
+		return ErrSkipFurther
+	}
 	return nil
 }
 
@@ -92,14 +124,16 @@ func required(s interface{}, o []interface{}) error {
 
 func required_without(s interface{}, o []interface{}) error {
 	sOK := required(s, nil) == nil
-
 	if !sOK {
 		for _, f := range o {
 			if err := required(f, nil); err != nil {
 				return err
 			}
 		}
+	} else {
+		return ErrSkipFurther
 	}
+
 	return nil
 }
 

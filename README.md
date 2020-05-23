@@ -19,19 +19,24 @@ go get github.com/tomasmik/vali
 ## Features
 
 Currently Vali comes with premade validation tags:
-* required
-* required_without
-* optional
-* min
-* max
-* one_of
-* none_of
-* eq
-* neq
+* required (validate that value if not nil/default)
+* required_without (validate that value not nil/default if *Val is)
+* optional (skip if nil/default)
+* min (validate that value is at least n)
+* max (validate that value is below n)
+* one_of (validate that value is one of given)
+* none_of (validate that value is none of given)
+* eq (validate that value is equal)
+* neq (validate that value is not equal)
+* dups (validate for duplicates in a slice)
 
 Tags behavior:
 * Multiple validation tags can be added for a single struct field.
 * Validation tags are applied in order so you can chain them however you like.
+
+Errors:
+* To return a custom error, you can use the defined `BubbleErr` function.
+* To force skip validation for a certain field, you can now return `ErrSkipFurther`.
 
 Special tags:
 * `>` - Allows you to validate the contents of a slice/array.
@@ -106,14 +111,13 @@ Documentation for these functions can be found in `utils.go` file.
 
 ## Current state
 
-The package is in it's infancy while it should work
-there are some missing parts that will be added:
+Other than general clean up and making the whole
+validation process smoother with less allocations and conversions
+time should be spent on:
 
-* General clean up of `types.go` and `tagfn.go`
-* More tests
-* Better documenation
-* Custom errors
-* Better examples
+* Adding more/better tests.
+* Better documenation.
+* Improving the error aggregation if possible.
 
 ## Contributing
 If you want to improve any part of this validator you're free to create a Pull Request or an Issue.

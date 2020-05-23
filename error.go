@@ -1,14 +1,6 @@
 package vali
 
-import (
-	"fmt"
-	"reflect"
-)
-
-type a interface {
-	AddError(err ...error)
-	Error() error
-}
+import ()
 
 // AggErr is a struct which allows the
 // Validate func to stack errors in to a slice
@@ -48,12 +40,4 @@ func (e *AggErr) toError() error {
 		return nil
 	}
 	return e
-}
-
-func tagError(field, tag string, err error) error {
-	return fmt.Errorf("field: '%s', failed '%s' tag with an error: '%v'", field, tag, err)
-}
-
-func typeMismatch(i, o interface{}) error {
-	return fmt.Errorf("argument with type %v cant be compared to value of type %v", reflect.TypeOf(o), reflect.TypeOf(i))
 }

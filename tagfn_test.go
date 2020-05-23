@@ -1015,7 +1015,7 @@ func TestRequiredWithout(t *testing.T) {
 					Str2: strEmpty,
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 

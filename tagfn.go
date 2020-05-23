@@ -130,7 +130,6 @@ func required_without(s interface{}, o []interface{}) error {
 				return err
 			}
 		}
-	} else {
 		return ErrSkipFurther
 	}
 
